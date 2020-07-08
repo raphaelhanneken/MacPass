@@ -171,15 +171,28 @@ NSString *const MPToolbarItemIdentifierAutotype     = @"TOOLBAR_AUTOTYPE";
     }
     else if( [itemIdentifier isEqualToString:MPToolbarItemIdentifierSearch]){
       NSSearchField *searchField = [[NSSearchField alloc] init];
+      if(@available(macOS 10.16,*)) {
+        item = [[NSSearchToolbarItem alloc] init];
+        ((NSSearchToolbarItem *)item).searchField = searchField;
+      }
+      else {
+        item = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
+        item.view = searchField;
+        item.minSize = NSMakeSize(140, 32);
+        item.maxSize = NSMakeSize(400, 32);
+      }
+      
+      NSString *itemLabel = [self _localizedLabelForToolbarItemIdentifier:itemIdentifier];
+      item.label = itemLabel;
+      item.paletteLabel = itemLabel;
+
       searchField.action = @selector(updateSearch:);
       NSSearchFieldCell *cell = searchField.cell;
       cell.cancelButtonCell.action = @selector(exitSearch:);
       cell.cancelButtonCell.target = nil;
       searchField.recentsAutosaveName = @"RecentEntrySearches";
-      item.view = searchField;
+
       /* Use default size base on documentation */
-      item.minSize = NSMakeSize(140, 32);
-      item.maxSize = NSMakeSize(400, 32);
       NSMenu *templateMenu = [self _allocateSearchMenuTemplate];
       searchField.searchMenuTemplate = templateMenu;
       searchField.placeholderString = NSLocalizedString(@"SEARCH_EVERYWHERE", @"Placeholder string displayed in the search field in the toolbar");
@@ -188,21 +201,28 @@ NSString *const MPToolbarItemIdentifierAutotype     = @"TOOLBAR_AUTOTYPE";
       self.searchField = searchField;
     }
     else {
-      NSButton *button = [[MPToolbarButton alloc] initWithFrame:NSMakeRect(0, 0, 32, 32)];
-      NSImage *image = self.toolbarImages[itemIdentifier];
-      image.size = NSMakeSize(16, 16);
-      [button setImage:image];
-      [button sizeToFit];
-      button.action = [self _actionForToolbarItemIdentifier:itemIdentifier];
-      
-      NSRect fittingRect = [button frame];
-      fittingRect.size.width = MAX( (CGFloat)32.0,fittingRect.size.width);
-      button.frame = fittingRect;
-      item.view = button;
       NSMenuItem *menuRepresentation = [[NSMenuItem alloc] initWithTitle:itemLabel
                                                                   action:[self _actionForToolbarItemIdentifier:itemIdentifier]
                                                            keyEquivalent:@""];
       item.menuFormRepresentation = menuRepresentation;
+      /* macOS 10.15 does not need buttons as custom views */
+      if(@available(macOS 10.15,*)) {
+        item.image = self.toolbarImages[itemIdentifier];
+        item.bordered = YES;
+      }
+      else {
+        NSButton *button = [[MPToolbarButton alloc] initWithFrame:NSMakeRect(0, 0, 32, 32)];
+        NSImage *image = self.toolbarImages[itemIdentifier];
+        image.size = NSMakeSize(16, 16);
+        [button setImage:image];
+        [button sizeToFit];
+        button.action = [self _actionForToolbarItemIdentifier:itemIdentifier];
+        
+        NSRect fittingRect = [button frame];
+        fittingRect.size.width = MAX( (CGFloat)32.0,fittingRect.size.width);
+        button.frame = fittingRect;
+        item.view = button;
+      }
     }
     self.toolbarItems[itemIdentifier] = item;
   }
@@ -218,17 +238,33 @@ NSString *const MPToolbarItemIdentifierAutotype     = @"TOOLBAR_AUTOTYPE";
 }
 
 - (NSDictionary *)createToolbarImages {
-  NSDictionary *imageDict = @{ MPToolbarItemIdentifierLock: [NSImage imageNamed:NSImageNameLockLockedTemplate],
-                               MPToolbarItemIdentifierAddEntry: [MPIconHelper icon:MPIconAddEntry],
-                               MPToolbarItemIdentifierAddGroup: [MPIconHelper icon:MPIconAddFolder],
-                               MPToolbarItemIdentifierCopyUsername : [MPIconHelper icon:MPIconIdentity],
-                               MPToolbarItemIdentifierCopyPassword : [MPIconHelper icon:MPIconPassword],
-                               MPToolbarItemIdentifierDelete: [MPIconHelper icon:MPIconTrash],
-                               MPToolbarItemIdentifierAction: [NSImage imageNamed:NSImageNameActionTemplate],
-                               MPToolbarItemIdentifierInspector: [MPIconHelper icon:MPIconInfo],
-                               MPToolbarItemIdentifierHistory: [MPIconHelper icon:MPIconHistory],
-                               MPToolbarItemIdentifierAutotype : [MPIconHelper icon:MPIconKeyboard]
-                               };
+  NSDictionary *imageDict;
+  if(@available(macOS 11.0, *)) {
+    imageDict = @{ MPToolbarItemIdentifierLock: [NSImage imageNamed:NSImageNameLockLockedTemplate],
+                   MPToolbarItemIdentifierAddEntry: [NSImage imageWithSystemSymbolName:@"key" accessibilityDescription:nil],
+                   MPToolbarItemIdentifierAddGroup: [NSImage imageWithSystemSymbolName:@"folder.badge.plus" accessibilityDescription:nil],
+                   MPToolbarItemIdentifierCopyUsername : [NSImage imageWithSystemSymbolName:@"person" accessibilityDescription:nil],
+                   MPToolbarItemIdentifierCopyPassword : [NSImage imageWithSystemSymbolName:@"ellipsis.rectangle" accessibilityDescription:nil],
+                   MPToolbarItemIdentifierDelete: [NSImage imageWithSystemSymbolName:@"trash" accessibilityDescription:nil],
+                   MPToolbarItemIdentifierAction: [NSImage imageNamed:NSImageNameActionTemplate],
+                   MPToolbarItemIdentifierInspector: [NSImage imageWithSystemSymbolName:@"sidebar.right" accessibilityDescription:nil],
+                   MPToolbarItemIdentifierHistory: [NSImage imageWithSystemSymbolName:@"clock.arrow.circlepath" accessibilityDescription:nil],
+                   MPToolbarItemIdentifierAutotype : [NSImage imageWithSystemSymbolName:@"keyboard" accessibilityDescription:nil]
+    };
+  }
+  else {
+    imageDict = @{ MPToolbarItemIdentifierLock: [NSImage imageNamed:NSImageNameLockLockedTemplate],
+                   MPToolbarItemIdentifierAddEntry: [MPIconHelper icon:MPIconAddEntry],
+                   MPToolbarItemIdentifierAddGroup: [MPIconHelper icon:MPIconAddFolder],
+                   MPToolbarItemIdentifierCopyUsername : [MPIconHelper icon:MPIconIdentity],
+                   MPToolbarItemIdentifierCopyPassword : [MPIconHelper icon:MPIconPassword],
+                   MPToolbarItemIdentifierDelete: [MPIconHelper icon:MPIconTrash],
+                   MPToolbarItemIdentifierAction: [NSImage imageNamed:NSImageNameActionTemplate],
+                   MPToolbarItemIdentifierInspector: [MPIconHelper icon:MPIconInfo],
+                   MPToolbarItemIdentifierHistory: [MPIconHelper icon:MPIconHistory],
+                   MPToolbarItemIdentifierAutotype : [MPIconHelper icon:MPIconKeyboard]
+    };
+  }
   return imageDict;
 }
 
@@ -273,7 +309,7 @@ NSString *const MPToolbarItemIdentifierAutotype     = @"TOOLBAR_AUTOTYPE";
                    MPToolbarItemIdentifierSearch: NSLocalizedString(@"SEARCH", @"Search input in Toolbar "),
                    MPToolbarItemIdentifierHistory: NSLocalizedString(@"SHOW_HISTORY", @"Toolbar item to toggle history display"),
                    MPToolbarItemIdentifierAutotype: NSLocalizedString(@"TOOLBAR_PERFORM_AUTOTYPE_FOR_ENTRY", @"Toolbar item to perform autotype")
-                   };
+    };
   });
   return labelDict[identifier];
 }
@@ -291,7 +327,7 @@ NSString *const MPToolbarItemIdentifierAutotype     = @"TOOLBAR_AUTOTYPE";
                     MPToolbarItemIdentifierInspector: @(MPActionToggleInspector),
                     MPToolbarItemIdentifierHistory: @(MPActionShowEntryHistory),
                     MPToolbarItemIdentifierAutotype: @(MPActionPerformAutotypeForSelectedEntry)
-                    };
+    };
   });
   MPActionType actionType = (MPActionType)[actionDict[identifier] integerValue];
   return [MPActionHelper actionOfType:actionType];
