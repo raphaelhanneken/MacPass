@@ -171,27 +171,27 @@ NSString *const MPToolbarItemIdentifierAutotype     = @"TOOLBAR_AUTOTYPE";
     }
     else if( [itemIdentifier isEqualToString:MPToolbarItemIdentifierSearch]){
       NSSearchField *searchField = [[NSSearchField alloc] init];
-      if(@available(macOS 10.16,*)) {
-        item = [[NSSearchToolbarItem alloc] init];
-        ((NSSearchToolbarItem *)item).searchField = searchField;
-      }
-      else {
-        item = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
-        item.view = searchField;
-        item.minSize = NSMakeSize(140, 32);
-        item.maxSize = NSMakeSize(400, 32);
-      }
+      /*if(@available(macOS 10.16,*)) {
+       item = [[NSSearchToolbarItem alloc] init];
+       ((NSSearchToolbarItem *)item).searchField = searchField;
+       }
+       else {*/
+      item = [[NSToolbarItem alloc] initWithItemIdentifier:itemIdentifier];
+      item.view = searchField;
+      item.minSize = NSMakeSize(140, 32);
+      item.maxSize = NSMakeSize(400, 32);
+      /*}*/
       
       NSString *itemLabel = [self _localizedLabelForToolbarItemIdentifier:itemIdentifier];
       item.label = itemLabel;
       item.paletteLabel = itemLabel;
-
+      
       searchField.action = @selector(updateSearch:);
       NSSearchFieldCell *cell = searchField.cell;
       cell.cancelButtonCell.action = @selector(exitSearch:);
       cell.cancelButtonCell.target = nil;
       searchField.recentsAutosaveName = @"RecentEntrySearches";
-
+      
       /* Use default size base on documentation */
       NSMenu *templateMenu = [self _allocateSearchMenuTemplate];
       searchField.searchMenuTemplate = templateMenu;

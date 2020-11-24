@@ -122,7 +122,7 @@ typedef void (^MPPasswordChangedBlock)(BOOL didChangePassword);
   } else {
     // to not do any magic here
   }
-  if (@available(macOS 10.16, *)) {
+  if (@available(macOS 11.0, *)) {
     self.window.toolbarStyle = NSWindowToolbarStyleUnified;
   }
   self.toolbar.delegate = self.toolbarDelegate;
