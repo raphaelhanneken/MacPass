@@ -49,7 +49,7 @@
 
   NSRunningApplication *targetApplication = [NSRunningApplication runningApplicationWithProcessIdentifier:self.environment.pid];
   if(nil != targetApplication) {
-    self.targetApplicationImageView.image = targetApplication.icon;
+    self.targetApplicationImageView.image = [self _composeInfoImage];
   }
   
   NSString *template = @"";
@@ -104,6 +104,43 @@
 
 - (void)cancelSelection:(id)sender {
   [MPAutotypeDaemon.defaultDaemon cancelAutotypeContextSelectionForEnvironment:self.environment];
+}
+
+- (NSImage *)_composeInfoImage {
+  static const uint32_t iconSize = 64;
+  uint32_t imageWidth = 256;
+  uint32_t imageHeight = 256;
+  
+  NSRunningApplication *targetApplication = [NSRunningApplication runningApplicationWithProcessIdentifier:self.environment.pid];
+  CGImageRef windowGrab = CGWindowListCreateImage(CGRectNull, kCGWindowListOptionIncludingWindow, self.environment.windowId, kCGWindowImageDefault | kCGWindowImageBestResolution);
+  NSImage *windowImage = [[NSImage alloc] initWithCGImage:windowGrab size:NSZeroSize];
+  CFRelease(windowGrab);
+  
+  if(windowImage.size.width > windowImage.size.height) {
+    imageHeight = imageWidth * (windowImage.size.height / windowImage.size.width);
+  }
+  else {
+    imageWidth = imageWidth * (windowImage.size.width / windowImage.size.height);
+  }
+  
+  if(!targetApplication.icon) {
+    return windowImage;
+  }
+  
+  NSImage *composite = [[NSImage alloc] initWithSize:NSMakeSize(MAX(imageWidth, iconSize), MAX(imageHeight, iconSize))];
+  [composite lockFocus];
+  /* draw the image at the top left */
+  [windowImage drawInRect:NSMakeRect(composite.size.width - imageWidth, composite.size.height - imageHeight, imageWidth, imageHeight)
+                 fromRect:NSZeroRect
+                operation:NSCompositingOperationSourceOver
+                 fraction:1];
+  /* draw the app icon at the bottom left */
+  [targetApplication.icon drawInRect:NSMakeRect(0, 0, iconSize, iconSize)
+                            fromRect:NSZeroRect
+                           operation:NSCompositingOperationSourceOver
+                            fraction:1];
+  [composite unlockFocus];
+  return composite;
 }
 
 @end

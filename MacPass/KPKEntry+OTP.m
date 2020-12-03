@@ -15,7 +15,11 @@
 }
 
 - (BOOL)hasTOTP {
-  return NO;
+  BOOL hasURLKey = [self hasAttributeWithKey:kKPKAttributeKeyOTPOAuthURL];
+  BOOL hasSeedKey = [self hasAttributeWithKey:kKPKAttributeKeyTimeOTPSeed];
+  BOOL hasSettingsKey = [self hasAttributeWithKey:kKPKAttributeKeyTimeOTPSettings];
+  
+  return(hasURLKey || (hasSeedKey && hasSettingsKey));
 }
 
 @end
